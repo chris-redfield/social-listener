@@ -770,6 +770,12 @@ settings = Settings()
   - Load multiple spaCy models (en, pt, es, etc.)
   - Route to correct model based on detected language
   - Store detected language in posts table
+- [ ] **Filter noisy NER entities**: Clean up false positives from spaCy
+  - Skip @handles being detected as LOC
+  - Filter out currency symbols (R$)
+  - Skip common words misclassified as ORG/LOC
+  - Add minimum entity length filter
+  - Consider entity type whitelist per context
 
 ### 10.2 Platform Expansion
 
