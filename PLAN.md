@@ -1,9 +1,9 @@
 # Social Media Listener - Project Plan
 
-> **Project Codename:** SocialEar  
+> **Project Codename:** social-listener  
 > **Version:** 0.1.0 (MVP)  
 > **Last Updated:** January 2026  
-> **Author:** Chris (Plix Games / LATAM Airlines)
+> **Author:** Chris 
 
 ---
 
