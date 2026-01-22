@@ -42,7 +42,7 @@ def build_date_filter(days: int | None):
 @router.get("/overview", response_model=AnalyticsOverview)
 async def analytics_overview(
     listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
-    days: int | None = Query(None, ge=1, le=90, description="Filter to last N days"),
+    days: int | None = Query(None, ge=1, le=365, description="Filter to last N days"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get overall analytics summary."""
@@ -127,7 +127,7 @@ async def analytics_overview(
 @router.get("/sentiment", response_model=list[SentimentBreakdown])
 async def sentiment_breakdown(
     listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
-    days: int | None = Query(None, ge=1, le=90, description="Filter to last N days"),
+    days: int | None = Query(None, ge=1, le=365, description="Filter to last N days"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get sentiment breakdown with percentages."""
@@ -161,20 +161,24 @@ async def sentiment_breakdown(
 @router.get("/timeline", response_model=list[TimelinePoint])
 async def posts_timeline(
     listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
-    days: int = Query(7, ge=1, le=90),
+    days: int | None = Query(None, ge=1, le=365, description="Filter to last N days"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get posts timeline with sentiment breakdown per day."""
-    now = datetime.utcnow()
-    start_date = now - timedelta(days=days)
-
     parsed_ids = parse_listener_ids(listener_ids)
-    post_filter = build_listener_filter(parsed_ids)
+    listener_filter = build_listener_filter(parsed_ids)
+    date_filter = build_date_filter(days)
 
     # Use post_created_at (when post was made) instead of collected_at
-    # Filter out posts without post_created_at
     # Note: Reuse the same expression for select, group_by, and order_by to avoid SQL errors
     date_col = func.date_trunc("day", Post.post_created_at).label("date")
+
+    # Build where clause - always filter out posts without post_created_at
+    where_clause = and_(
+        listener_filter,
+        date_filter,
+        Post.post_created_at.isnot(None),
+    )
 
     query = (
         select(
@@ -190,13 +194,7 @@ async def posts_timeline(
                 "sentiment_neutral"
             ),
         )
-        .where(
-            and_(
-                post_filter,
-                Post.post_created_at.isnot(None),
-                Post.post_created_at >= start_date,
-            )
-        )
+        .where(where_clause)
         .group_by(date_col)
         .order_by(date_col)
     )
@@ -258,7 +256,7 @@ async def top_authors(
 @router.get("/engagement")
 async def engagement_stats(
     listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
-    days: int | None = Query(None, ge=1, le=90, description="Filter to last N days"),
+    days: int | None = Query(None, ge=1, le=365, description="Filter to last N days"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get engagement statistics."""

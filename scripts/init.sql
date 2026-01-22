@@ -5,18 +5,30 @@
 -- LISTENERS TABLE
 -- ===================
 CREATE TABLE IF NOT EXISTS listeners (
-    id              SERIAL PRIMARY KEY,
-    name            VARCHAR(255) NOT NULL,
-    platform        VARCHAR(50) NOT NULL,       -- 'threads' | 'bluesky' | 'all'
-    rule_type       VARCHAR(50) NOT NULL,       -- 'keyword' | 'mention' | 'hashtag'
-    rule_value      VARCHAR(500) NOT NULL,      -- The actual keyword/handle to monitor
-    is_active       BOOLEAN DEFAULT true,
-    has_new_content BOOLEAN DEFAULT false,      -- Flag for "content captured"
-    poll_frequency  INTEGER DEFAULT 300,        -- Seconds between polls
-    last_polled_at  TIMESTAMP,
-    created_at      TIMESTAMP DEFAULT NOW(),
-    updated_at      TIMESTAMP DEFAULT NOW()
+    id                        SERIAL PRIMARY KEY,
+    name                      VARCHAR(255) NOT NULL,
+    platform                  VARCHAR(50) NOT NULL,       -- 'threads' | 'bluesky' | 'all'
+    rule_type                 VARCHAR(50) NOT NULL,       -- 'keyword' | 'mention' | 'hashtag'
+    rule_value                VARCHAR(500) NOT NULL,      -- The actual keyword/handle to monitor
+    is_active                 BOOLEAN DEFAULT true,
+    has_new_content           BOOLEAN DEFAULT false,      -- Flag for "content captured"
+    initial_scrape_completed  BOOLEAN DEFAULT false,      -- True after first paginated scrape
+    poll_frequency            INTEGER DEFAULT 300,        -- Seconds between polls
+    last_polled_at            TIMESTAMP,
+    created_at                TIMESTAMP DEFAULT NOW(),
+    updated_at                TIMESTAMP DEFAULT NOW()
 );
+
+-- Migration: Add initial_scrape_completed column if it doesn't exist (for existing databases)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'listeners' AND column_name = 'initial_scrape_completed'
+    ) THEN
+        ALTER TABLE listeners ADD COLUMN initial_scrape_completed BOOLEAN DEFAULT false;
+    END IF;
+END $$;
 
 -- ===================
 -- POSTS TABLE

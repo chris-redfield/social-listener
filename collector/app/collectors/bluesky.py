@@ -13,6 +13,11 @@ from app.nlp.processor import nlp_processor
 
 logger = logging.getLogger(__name__)
 
+# Pagination settings
+INITIAL_SCRAPE_MAX_POSTS = 500  # Max posts to fetch on first scrape (uses pagination)
+REGULAR_SCRAPE_LIMIT = 100      # Posts per regular scrape (no pagination, API max is 100)
+PAGE_SIZE = 100                  # Posts per page when paginating
+
 
 class BlueskyCollector(BaseCollector):
     """Collector for Bluesky posts using the AT Protocol."""
@@ -88,21 +93,54 @@ class BlueskyCollector(BaseCollector):
         if listener.rule_type == "hashtag" and not search_term.startswith("#"):
             search_term = f"#{search_term}"
 
-        logger.info(f"Searching Bluesky for: {search_term}")
+        # Determine if this is initial scrape or regular scrape
+        is_initial = not listener.initial_scrape_completed
+        max_posts = INITIAL_SCRAPE_MAX_POSTS if is_initial else REGULAR_SCRAPE_LIMIT
+        use_pagination = is_initial
 
-        # Search for posts
-        response = client.app.bsky.feed.search_posts(
-            params={"q": search_term, "limit": 50}
+        logger.info(
+            f"Searching Bluesky for: {search_term} "
+            f"({'initial scrape, max ' + str(max_posts) + ' posts' if is_initial else 'regular scrape'})"
         )
 
         posts_collected = 0
-        for post_view in response.posts:
-            try:
-                saved = await self._save_post(post_view, listener, session)
-                if saved:
-                    posts_collected += 1
-            except Exception as e:
-                logger.error(f"Error saving post {post_view.uri}: {e}")
+        cursor = None
+
+        while posts_collected < max_posts:
+            # Calculate limit for this page
+            remaining = max_posts - posts_collected
+            limit = min(PAGE_SIZE, remaining)
+
+            # Search for posts
+            params = {"q": search_term, "limit": limit}
+            if cursor:
+                params["cursor"] = cursor
+
+            response = client.app.bsky.feed.search_posts(params=params)
+
+            if not response.posts:
+                break
+
+            for post_view in response.posts:
+                try:
+                    saved = await self._save_post(post_view, listener, session)
+                    if saved:
+                        posts_collected += 1
+                except Exception as e:
+                    logger.error(f"Error saving post {post_view.uri}: {e}")
+
+            # Check if we should continue paginating
+            cursor = getattr(response, 'cursor', None)
+            if not use_pagination or not cursor:
+                break
+
+            logger.info(f"Fetched {posts_collected} posts so far, continuing pagination...")
+
+        # Mark initial scrape as completed
+        if is_initial and posts_collected > 0:
+            listener.initial_scrape_completed = True
+            await session.flush()
+            logger.info(f"Initial scrape completed for listener {listener.id}, collected {posts_collected} posts")
 
         return posts_collected
 
@@ -114,21 +152,54 @@ class BlueskyCollector(BaseCollector):
         if handle.startswith("@"):
             handle = handle[1:]
 
-        logger.info(f"Searching Bluesky for mentions of: @{handle}")
+        # Determine if this is initial scrape or regular scrape
+        is_initial = not listener.initial_scrape_completed
+        max_posts = INITIAL_SCRAPE_MAX_POSTS if is_initial else REGULAR_SCRAPE_LIMIT
+        use_pagination = is_initial
 
-        # Search for posts mentioning the handle
-        response = client.app.bsky.feed.search_posts(
-            params={"q": f"@{handle}", "limit": 50}
+        logger.info(
+            f"Searching Bluesky for mentions of: @{handle} "
+            f"({'initial scrape, max ' + str(max_posts) + ' posts' if is_initial else 'regular scrape'})"
         )
 
         posts_collected = 0
-        for post_view in response.posts:
-            try:
-                saved = await self._save_post(post_view, listener, session)
-                if saved:
-                    posts_collected += 1
-            except Exception as e:
-                logger.error(f"Error saving post {post_view.uri}: {e}")
+        cursor = None
+
+        while posts_collected < max_posts:
+            # Calculate limit for this page
+            remaining = max_posts - posts_collected
+            limit = min(PAGE_SIZE, remaining)
+
+            # Search for posts mentioning the handle
+            params = {"q": f"@{handle}", "limit": limit}
+            if cursor:
+                params["cursor"] = cursor
+
+            response = client.app.bsky.feed.search_posts(params=params)
+
+            if not response.posts:
+                break
+
+            for post_view in response.posts:
+                try:
+                    saved = await self._save_post(post_view, listener, session)
+                    if saved:
+                        posts_collected += 1
+                except Exception as e:
+                    logger.error(f"Error saving post {post_view.uri}: {e}")
+
+            # Check if we should continue paginating
+            cursor = getattr(response, 'cursor', None)
+            if not use_pagination or not cursor:
+                break
+
+            logger.info(f"Fetched {posts_collected} posts so far, continuing pagination...")
+
+        # Mark initial scrape as completed
+        if is_initial and posts_collected > 0:
+            listener.initial_scrape_completed = True
+            await session.flush()
+            logger.info(f"Initial scrape completed for listener {listener.id}, collected {posts_collected} posts")
 
         return posts_collected
 

@@ -16,6 +16,7 @@ class Listener(Base):
     rule_value: Mapped[str] = mapped_column(String(500), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     has_new_content: Mapped[bool] = mapped_column(Boolean, default=False)
+    initial_scrape_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     poll_frequency: Mapped[int] = mapped_column(Integer, default=300)
     last_polled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

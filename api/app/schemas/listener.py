@@ -29,6 +29,7 @@ class ListenerResponse(BaseModel):
     rule_value: str
     is_active: bool
     has_new_content: bool
+    initial_scrape_completed: bool
     poll_frequency: int
     last_polled_at: datetime | None
     created_at: datetime

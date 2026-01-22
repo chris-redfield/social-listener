@@ -16,6 +16,8 @@
                     <option value="30" selected>Last 30 days</option>
                     <option value="60">Last 60 days</option>
                     <option value="90">Last 90 days</option>
+                    <option value="180">Last 180 days</option>
+                    <option value="">All time</option>
                 </select>
             </div>
             <div class="d-flex align-items-center">
@@ -191,13 +193,19 @@ async function loadDashboardData() {
     const days = getSelectedDays();
 
     // Build params - all endpoints now support days filter
-    let params = `?days=${days}`;
-    if (listenerIds) {
-        params += `&listener_ids=${listenerIds}`;
+    let params = '';
+    if (days) {
+        params = `?days=${days}`;
+        if (listenerIds) {
+            params += `&listener_ids=${listenerIds}`;
+        }
+    } else if (listenerIds) {
+        params = `?listener_ids=${listenerIds}`;
     }
 
     // Update timeline title
-    document.getElementById('timeline-title').textContent = `Posts Timeline (Last ${days} Days)`;
+    const titleText = days ? `Posts Timeline (Last ${days} Days)` : 'Posts Timeline (All Time)';
+    document.getElementById('timeline-title').textContent = titleText;
 
     // Load all data in parallel - all endpoints now filter by days
     const [overviewResponse, sentimentResponse, timelineResponse, engagementResponse] = await Promise.all([
