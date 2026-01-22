@@ -497,19 +497,19 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 ## 7. Development Phases
 
-### Phase 1: Foundation (MVP) ✨ START HERE
+### Phase 1: Foundation (MVP) ✅ COMPLETE
 
 **Goal:** Basic working system with one platform
 
 **Deliverables:**
-- [ ] Project structure and Docker setup
-- [ ] Database schema and migrations
-- [ ] Bluesky collector (simpler API, no auth needed)
-- [ ] Basic Flask API (CRUD for listeners)
-- [ ] Simple capture storage (no NLP yet)
-- [ ] Basic HTML interface (list listeners, view captures)
+- [x] Project structure and Docker setup
+- [x] Database schema (auto-created via SQLAlchemy)
+- [x] Bluesky collector (authenticated, keyword/hashtag/mention search)
+- [x] Basic FastAPI API (CRUD for listeners, posts)
+- [x] Simple capture storage with deduplication
+- [ ] Basic HTML interface (deferred to Phase 4)
 
-**Timeline:** 1-2 sessions
+**Timeline:** 1 session ✅
 
 ### Phase 2: Threads Integration
 
@@ -523,15 +523,16 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 **Timeline:** 1-2 sessions
 
-### Phase 3: NLP Pipeline
+### Phase 3: NLP Pipeline 🔄 IN PROGRESS
 
 **Goal:** Add sentiment analysis and entity extraction
 
 **Deliverables:**
-- [ ] Sentiment analysis integration
-- [ ] NER pipeline
-- [ ] Entity storage and querying
-- [ ] Update captures with NLP results
+- [ ] Sentiment analysis integration (TextBlob)
+- [ ] NER pipeline (spaCy)
+- [ ] Entity storage and querying (with deduplication)
+- [ ] Inline processing during collection
+- [ ] NLP error tracking (failsafe, non-blocking)
 
 **Timeline:** 1 session
 
@@ -756,6 +757,15 @@ settings = Settings()
 | AI-powered insights (LLM summaries) | Low | Phase 7 |
 | Mobile app | Low | Phase 8 |
 
+### 10.1.1 TODO - Small Improvements
+
+- [ ] **Bluesky search limit**: Currently hardcoded to 50 posts per request. Options:
+  - Increase to 100 (Bluesky API max)
+  - Make configurable via `BLUESKY_SEARCH_LIMIT` env var
+  - Add pagination support to fetch all results via cursor
+- [ ] **Reprocess endpoint**: Add `POST /posts/reprocess` to re-run NLP on existing posts
+- [ ] **Listener update endpoint**: Add `PUT /listeners/{id}` to update listener settings
+
 ### 10.2 Platform Expansion
 
 | Platform | Difficulty | Notes |
@@ -882,15 +892,38 @@ curl http://localhost:8000/api/analytics/overview
 - [x] Tech stack finalized (FastAPI, PostgreSQL, SQLAlchemy 2.0)
 - [x] Data model designed (posts, entities M:N relationship)
 - [x] Development phases defined
-- [ ] **NEXT:** Start Phase 1 implementation
 
-### Session 2 - [Date]
-- [ ] Phase 1: Project structure + Docker setup
-- [ ] Phase 1: Database schema + migrations
-- [ ] Phase 1: Basic FastAPI app running
-- [ ] ...
+### Session 2 - January 22, 2026 (Collector Service)
+- [x] Project structure created (`collector/`, `api/`, `scripts/`)
+- [x] Docker Compose setup (PostgreSQL + Collector containers)
+- [x] Database models implemented (Listener, Post, Entity, PostEntity)
+- [x] Collector service with FastAPI endpoints:
+  - `GET /health` - Health check
+  - `GET /status` - Scheduler status
+  - `POST /collect/bluesky` - Manual collection trigger
+  - `POST /collect/bluesky/test` - Test Bluesky connection
+  - `GET /listeners` - List listeners
+  - `POST /listeners` - Create listener
+  - `GET /listeners/{id}` - Get listener
+  - `DELETE /listeners/{id}` - Delete listener
+  - `GET /posts` - List collected posts
+  - `GET /posts/{id}` - Get specific post
+- [x] Bluesky collector implemented with:
+  - Keyword search
+  - Hashtag search (prepends #)
+  - Mention search (@handle)
+  - Post deduplication (upsert on conflict)
+  - Engagement metrics update on re-collection
+- [x] APScheduler integration for automatic polling
+- [x] Fixed timezone-aware datetime handling for PostgreSQL
+- [x] Tested end-to-end: 62+ posts collected successfully
+- [ ] **NEXT:** NLP Pipeline integration (sentiment + NER)
 
 ### Session 3 - [Date]
+- [ ] NLP Pipeline: Sentiment analysis with TextBlob
+- [ ] NLP Pipeline: Named Entity Recognition with spaCy
+- [ ] Entity deduplication and M:N linking
+- [ ] Management API with Swagger UI
 - [ ] ...
 
 ---

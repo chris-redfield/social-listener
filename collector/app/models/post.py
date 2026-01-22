@@ -31,9 +31,11 @@ class Post(Base):
     shares_count: Mapped[int] = mapped_column(Integer, default=0)
     clicks_count: Mapped[int] = mapped_column(Integer, default=0)
 
-    # NLP Analysis results (Phase 2)
+    # NLP Analysis results
     sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     sentiment_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    nlp_processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    nlp_error: Mapped[str | None] = mapped_column(Text, nullable=True)  # Error message if NLP failed
 
     # Timestamps
     post_created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

@@ -21,3 +21,9 @@ pydantic-settings==2.1.0
 
 # Logging
 structlog==24.1.0
+
+# NLP
+textblob==0.18.0
+spacy==3.7.4
+# spaCy model installed via direct URL
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl

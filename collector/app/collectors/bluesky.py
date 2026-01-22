@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.collectors.base import BaseCollector
 from app.config import settings
 from app.models import Listener, Post
+from app.nlp.processor import nlp_processor
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +136,9 @@ class BlueskyCollector(BaseCollector):
         self, post_view, listener: Listener, session: AsyncSession
     ) -> bool:
         """
-        Save a post to the database, handling duplicates.
+        Save a post to the database and run NLP processing.
+
+        NLP processing is failsafe - errors are logged but don't break the pipeline.
 
         Returns:
             True if post was newly inserted, False if it already existed
@@ -174,6 +177,16 @@ class BlueskyCollector(BaseCollector):
             except Exception:
                 pass
 
+        # Check if post already exists (to determine if we need to run NLP)
+        existing = await session.execute(
+            select(Post).where(
+                Post.platform == "bluesky",
+                Post.platform_post_id == platform_post_id,
+            )
+        )
+        existing_post = existing.scalar_one_or_none()
+        is_new_post = existing_post is None
+
         # Use PostgreSQL upsert to handle duplicates
         stmt = insert(Post).values(
             listener_id=listener.id,
@@ -203,10 +216,28 @@ class BlueskyCollector(BaseCollector):
             },
         )
 
-        result = await session.execute(stmt)
+        await session.execute(stmt)
         await session.flush()
 
-        # Check if this was an insert or update
-        # rowcount will be 1 for both insert and update with ON CONFLICT
-        # We need to check if the row was actually inserted
-        return result.rowcount > 0
+        # Run NLP processing for new posts only
+        if is_new_post:
+            # Fetch the post we just inserted
+            result = await session.execute(
+                select(Post).where(
+                    Post.platform == "bluesky",
+                    Post.platform_post_id == platform_post_id,
+                )
+            )
+            post = result.scalar_one()
+
+            # Process with NLP (failsafe - won't raise exceptions)
+            try:
+                await nlp_processor.process_post(post, session)
+                await session.flush()
+            except Exception as e:
+                # This shouldn't happen as process_post is failsafe,
+                # but just in case, log and continue
+                logger.error(f"Unexpected NLP error for post {post.id}: {e}")
+                post.nlp_error = f"Unexpected error: {str(e)}"
+
+        return is_new_post

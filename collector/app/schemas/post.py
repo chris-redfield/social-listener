@@ -20,6 +20,8 @@ class PostResponse(BaseModel):
     views_count: int
     sentiment_score: float | None
     sentiment_label: str | None
+    nlp_processed_at: datetime | None
+    nlp_error: str | None
     post_created_at: datetime | None
     collected_at: datetime
 

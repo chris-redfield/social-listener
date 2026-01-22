@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.collectors.bluesky import BlueskyCollector
 from app.config import settings
 from app.database import async_session, get_session, init_db
-from app.models import Listener, Post
+from app.models import Listener, Post, Entity, PostEntity
 from app.schemas import (
     CollectRequest,
     CollectResponse,
@@ -18,6 +18,7 @@ from app.schemas import (
     ListenerCreate,
     ListenerResponse,
     PostResponse,
+    EntityResponse,
 )
 from app.schemas.collector import SchedulerJob
 
@@ -284,3 +285,109 @@ async def get_post(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return post
+
+
+# ===================
+# Entities
+# ===================
+
+
+@app.get("/entities", response_model=list[EntityResponse])
+async def list_entities(
+    entity_type: str | None = None,
+    limit: int = 100,
+    session: AsyncSession = Depends(get_session),
+):
+    """List all unique entities."""
+    query = select(Entity).order_by(Entity.created_at.desc()).limit(limit)
+    if entity_type:
+        query = query.where(Entity.entity_type == entity_type)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+@app.get("/entities/top")
+async def top_entities(
+    entity_type: str | None = None,
+    limit: int = 20,
+    session: AsyncSession = Depends(get_session),
+):
+    """Get top entities by occurrence count."""
+    from sqlalchemy import func
+
+    query = (
+        select(
+            Entity.id,
+            Entity.entity_type,
+            Entity.entity_text,
+            Entity.display_text,
+            func.count(PostEntity.id).label("occurrence_count"),
+        )
+        .join(PostEntity, Entity.id == PostEntity.entity_id)
+        .group_by(Entity.id)
+        .order_by(func.count(PostEntity.id).desc())
+        .limit(limit)
+    )
+
+    if entity_type:
+        query = query.where(Entity.entity_type == entity_type)
+
+    result = await session.execute(query)
+    rows = result.all()
+
+    return [
+        {
+            "id": row.id,
+            "entity_type": row.entity_type,
+            "entity_text": row.entity_text,
+            "display_text": row.display_text,
+            "occurrence_count": row.occurrence_count,
+        }
+        for row in rows
+    ]
+
+
+@app.get("/posts/{post_id}/entities")
+async def get_post_entities(
+    post_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    """Get entities for a specific post."""
+    # Check post exists
+    result = await session.execute(select(Post).where(Post.id == post_id))
+    post = result.scalar_one_or_none()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    # Get entities via junction table
+    query = (
+        select(
+            PostEntity.id,
+            PostEntity.confidence,
+            PostEntity.start_pos,
+            PostEntity.end_pos,
+            Entity.id.label("entity_id"),
+            Entity.entity_type,
+            Entity.entity_text,
+            Entity.display_text,
+        )
+        .join(Entity, PostEntity.entity_id == Entity.id)
+        .where(PostEntity.post_id == post_id)
+    )
+
+    result = await session.execute(query)
+    rows = result.all()
+
+    return [
+        {
+            "id": row.id,
+            "entity_id": row.entity_id,
+            "entity_type": row.entity_type,
+            "entity_text": row.entity_text,
+            "display_text": row.display_text,
+            "confidence": row.confidence,
+            "start_pos": row.start_pos,
+            "end_pos": row.end_pos,
+        }
+        for row in rows
+    ]
