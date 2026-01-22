@@ -523,28 +523,28 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 **Timeline:** 1-2 sessions
 
-### Phase 3: NLP Pipeline 🔄 IN PROGRESS
+### Phase 3: NLP Pipeline ✅ COMPLETE
 
 **Goal:** Add sentiment analysis and entity extraction
 
 **Deliverables:**
-- [ ] Sentiment analysis integration (TextBlob)
-- [ ] NER pipeline (spaCy)
-- [ ] Entity storage and querying (with deduplication)
-- [ ] Inline processing during collection
-- [ ] NLP error tracking (failsafe, non-blocking)
+- [x] Sentiment analysis integration (LeIA - Portuguese)
+- [x] NER pipeline (spaCy pt_core_news_sm)
+- [x] Entity storage and querying (with deduplication)
+- [x] Inline processing during collection
+- [x] NLP error tracking (failsafe, non-blocking)
 
-**Timeline:** 1 session
+**Timeline:** 1 session ✅
 
-### Phase 4: Analytics & UI
+### Phase 4: Analytics & UI 🔄 IN PROGRESS
 
 **Goal:** Rich analytics and improved interface
 
 **Deliverables:**
-- [ ] Analytics endpoints
+- [x] Analytics endpoints (overview, sentiment, timeline, authors, engagement)
 - [ ] Dashboard with charts
 - [ ] Export functionality (CSV/JSON)
-- [ ] "New content" flag system (✅)
+- [x] "New content" flag system
 
 **Timeline:** 1-2 sessions
 
@@ -928,13 +928,24 @@ curl http://localhost:8000/api/analytics/overview
 - [x] APScheduler integration for automatic polling
 - [x] Fixed timezone-aware datetime handling for PostgreSQL
 - [x] Tested end-to-end: 62+ posts collected successfully
-- [ ] **NEXT:** NLP Pipeline integration (sentiment + NER)
+- [x] NLP Pipeline integration (sentiment + NER)
+- [x] Portuguese NLP models:
+  - Sentiment: LeIA (Portuguese VADER adaptation, lexicon-based)
+  - NER: spaCy `pt_core_news_sm`
+- [x] NLP error handling (failsafe, logs to `nlp_error` column)
+- [x] Entity deduplication with M:N linking
+- [x] Management API (`api/` container) with Swagger UI:
+  - Listeners CRUD + toggle/acknowledge
+  - Posts with pagination and filtering
+  - Entities with top occurrences
+  - Analytics: overview, sentiment, timeline, authors, engagement
+- [x] Database init script (`scripts/init.sql`)
+- **Active listeners:** Lula Oficial, Netflix Brasil
+- **Stats:** 100 posts, 187 entities, sentiment analysis working
 
 ### Session 3 - [Date]
-- [ ] NLP Pipeline: Sentiment analysis with TextBlob
-- [ ] NLP Pipeline: Named Entity Recognition with spaCy
-- [ ] Entity deduplication and M:N linking
-- [ ] Management API with Swagger UI
+- [ ] Dashboard UI (HTML/Jinja2)
+- [ ] Export functionality (CSV/JSON)
 - [ ] ...
 
 ---
