@@ -56,20 +56,28 @@ async def analytics_overview(
     # Total entities
     total_entities = (await session.execute(select(func.count(Entity.id)))).scalar()
 
-    # Posts today
+    # Posts today (by post creation date, not collection date)
     posts_today = (
         await session.execute(
             select(func.count(Post.id)).where(
-                and_(post_filter, Post.collected_at >= today_start)
+                and_(
+                    post_filter,
+                    Post.post_created_at.isnot(None),
+                    Post.post_created_at >= today_start
+                )
             )
         )
     ).scalar()
 
-    # Posts this week
+    # Posts this week (by post creation date, not collection date)
     posts_this_week = (
         await session.execute(
             select(func.count(Post.id)).where(
-                and_(post_filter, Post.collected_at >= week_start)
+                and_(
+                    post_filter,
+                    Post.post_created_at.isnot(None),
+                    Post.post_created_at >= week_start
+                )
             )
         )
     ).scalar()

@@ -7,15 +7,27 @@
         <p class="text-muted">Overview of your social media monitoring</p>
     </div>
     <div class="col-auto">
-        <div class="d-flex align-items-center">
-            <label class="me-2 text-muted">Filter by Listener:</label>
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="listenerFilterBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                    All Listeners
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end" id="listenerFilterMenu" style="min-width: 250px;">
-                    <!-- Options loaded dynamically -->
-                </ul>
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center">
+                <label class="me-2 text-muted">Timeline:</label>
+                <select id="daysFilter" class="form-select form-select-sm" style="width: auto;">
+                    <option value="7">Last 7 days</option>
+                    <option value="14">Last 14 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="60">Last 60 days</option>
+                    <option value="90">Last 90 days</option>
+                </select>
+            </div>
+            <div class="d-flex align-items-center">
+                <label class="me-2 text-muted">Listener:</label>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="listenerFilterBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        All Listeners
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="listenerFilterMenu" style="min-width: 250px;">
+                        <!-- Options loaded dynamically -->
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -45,7 +57,7 @@
     <div class="col-md-6 mb-4">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-graph-up me-2"></i>Posts Timeline (Last 7 Days)
+                <i class="bi bi-graph-up me-2"></i><span id="timeline-title">Posts Timeline (Last 30 Days)</span>
             </div>
             <div class="card-body">
                 <div id="timeline-chart" style="height: 300px;"></div>
@@ -83,6 +95,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadListenerFilter();
     // Load initial dashboard data
     loadDashboardData();
+
+    // Handle days filter change
+    document.getElementById('daysFilter').addEventListener('change', function() {
+        loadDashboardData();
+    });
 });
 
 async function loadListenerFilter() {
@@ -165,15 +182,24 @@ function getSelectedListenerNames() {
     return Array.from(checkboxes).map(cb => cb.dataset.name);
 }
 
+function getSelectedDays() {
+    return document.getElementById('daysFilter').value;
+}
+
 async function loadDashboardData() {
     const listenerIds = getSelectedListenerIds();
+    const days = getSelectedDays();
     const params = listenerIds ? `?listener_ids=${listenerIds}` : '';
+    const timelineParams = params ? `${params}&days=${days}` : `?days=${days}`;
+
+    // Update timeline title
+    document.getElementById('timeline-title').textContent = `Posts Timeline (Last ${days} Days)`;
 
     // Load all data in parallel
     const [overviewResponse, sentimentResponse, timelineResponse, engagementResponse] = await Promise.all([
         fetch(`/api/analytics/overview${params}`),
         fetch(`/api/analytics/sentiment${params}`),
-        fetch(`/api/analytics/timeline${params}&days=7`.replace('&', params ? '&' : '?')),
+        fetch(`/api/analytics/timeline${timelineParams}`),
         fetch(`/api/analytics/engagement${params}`)
     ]);
 
