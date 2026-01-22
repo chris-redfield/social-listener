@@ -35,5 +35,20 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: social-listener-api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-sociallistener}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
