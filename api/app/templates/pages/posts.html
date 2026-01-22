@@ -52,10 +52,22 @@
         </div>
     </div>
 </div>
+
+<!-- Pagination -->
+<div id="pagination-container" class="d-flex justify-content-between align-items-center mt-4" style="display: none !important;">
+    <div id="pagination-info" class="text-muted"></div>
+    <nav>
+        <ul id="pagination" class="pagination mb-0"></ul>
+    </nav>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Current filter state
+let currentFilters = {};
+let currentPage = 1;
+
 document.addEventListener('DOMContentLoaded', function() {
     loadListeners();
     loadPosts();
@@ -74,7 +86,8 @@ async function loadListeners() {
     });
 }
 
-async function loadPosts(params = {}) {
+async function loadPosts(page = 1) {
+    currentPage = page;
     const container = document.getElementById('posts-list');
     container.innerHTML = `
         <div class="col-12 text-center py-5">
@@ -84,11 +97,14 @@ async function loadPosts(params = {}) {
         </div>
     `;
 
+    // Build query params from current filters + page
+    const params = { ...currentFilters, page };
     const queryParams = new URLSearchParams(params);
     const response = await fetch(`/api/posts?${queryParams}`);
     const data = await response.json();
 
     renderPosts(data.items || data);
+    renderPagination(data);
 }
 
 function renderPosts(posts) {
@@ -101,6 +117,7 @@ function renderPosts(posts) {
                 <p class="mt-2">No posts found</p>
             </div>
         `;
+        document.getElementById('pagination-container').style.display = 'none';
         return;
     }
 
@@ -128,13 +145,91 @@ function renderPosts(posts) {
                     </div>
                 </div>
                 <div class="card-footer bg-transparent">
-                    <a href="${post.url || '#'}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <a href="${post.post_url || '#'}" target="_blank" class="btn btn-sm btn-outline-primary">
                         <i class="bi bi-box-arrow-up-right me-1"></i>View Original
                     </a>
                 </div>
             </div>
         </div>
     `).join('');
+}
+
+function renderPagination(data) {
+    const container = document.getElementById('pagination-container');
+    const pagination = document.getElementById('pagination');
+    const info = document.getElementById('pagination-info');
+
+    if (!data.pages || data.pages <= 1) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'flex';
+
+    // Info text
+    const start = (data.page - 1) * data.page_size + 1;
+    const end = Math.min(data.page * data.page_size, data.total);
+    info.textContent = `Showing ${start}-${end} of ${data.total} posts`;
+
+    // Build pagination buttons
+    let html = '';
+
+    // Previous button
+    html += `
+        <li class="page-item ${data.page === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${data.page - 1}); return false;">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+    `;
+
+    // Page numbers
+    const maxVisible = 5;
+    let startPage = Math.max(1, data.page - Math.floor(maxVisible / 2));
+    let endPage = Math.min(data.pages, startPage + maxVisible - 1);
+
+    if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+
+    if (startPage > 1) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(1); return false;">1</a></li>`;
+        if (startPage > 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        html += `
+            <li class="page-item ${i === data.page ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a>
+            </li>
+        `;
+    }
+
+    if (endPage < data.pages) {
+        if (endPage < data.pages - 1) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${data.pages}); return false;">${data.pages}</a></li>`;
+    }
+
+    // Next button
+    html += `
+        <li class="page-item ${data.page === data.pages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${data.page + 1}); return false;">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+    `;
+
+    pagination.innerHTML = html;
+}
+
+function goToPage(page) {
+    loadPosts(page);
+    // Scroll to top of posts list
+    document.getElementById('posts-list').scrollIntoView({ behavior: 'smooth' });
 }
 
 function truncateText(text, maxLength) {
@@ -152,13 +247,14 @@ function formatDate(dateStr) {
 document.getElementById('filterForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    const params = {};
+    currentFilters = {};
 
     new FormData(form).forEach((value, key) => {
-        if (value) params[key] = value;
+        if (value) currentFilters[key] = value;
     });
 
-    loadPosts(params);
+    // Reset to page 1 when filters change
+    loadPosts(1);
 });
 </script>
 {% endblock %}
