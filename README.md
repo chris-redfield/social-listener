@@ -241,10 +241,3 @@ docker compose down -v
 - [ ] Multi-user authentication
 - [ ] Email/Slack notifications
 
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Contributing
-
-Contributions are welcome! Please read the [PLAN.md](PLAN.md) for architecture details and development guidelines.
