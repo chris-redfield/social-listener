@@ -31,9 +31,18 @@ def build_listener_filter(listener_ids: List[int] | None):
     return Post.listener_id.in_(listener_ids)
 
 
+def build_date_filter(days: int | None):
+    """Build SQLAlchemy filter for date range based on post_created_at."""
+    if not days:
+        return True  # No filter
+    start_date = datetime.utcnow() - timedelta(days=days)
+    return and_(Post.post_created_at.isnot(None), Post.post_created_at >= start_date)
+
+
 @router.get("/overview", response_model=AnalyticsOverview)
 async def analytics_overview(
     listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
+    days: int | None = Query(None, ge=1, le=90, description="Filter to last N days"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get overall analytics summary."""
@@ -41,11 +50,15 @@ async def analytics_overview(
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = today_start - timedelta(days=7)
 
-    # Base query filter
+    # Base query filters
     parsed_ids = parse_listener_ids(listener_ids)
-    post_filter = build_listener_filter(parsed_ids)
+    listener_filter = build_listener_filter(parsed_ids)
+    date_filter = build_date_filter(days)
 
-    # Total posts
+    # Combined filter for posts
+    post_filter = and_(listener_filter, date_filter) if days else listener_filter
+
+    # Total posts (within date range if specified)
     total_posts = (
         await session.execute(select(func.count(Post.id)).where(post_filter))
     ).scalar()
@@ -82,7 +95,7 @@ async def analytics_overview(
         )
     ).scalar()
 
-    # Sentiment breakdown
+    # Sentiment breakdown (apply date filter)
     sentiment_query = (
         select(Post.sentiment_label, func.count(Post.id))
         .where(and_(post_filter, Post.sentiment_label.isnot(None)))
@@ -91,7 +104,7 @@ async def analytics_overview(
     sentiment_result = await session.execute(sentiment_query)
     sentiment_breakdown = {row[0]: row[1] for row in sentiment_result.all()}
 
-    # Platform breakdown
+    # Platform breakdown (apply date filter)
     platform_query = (
         select(Post.platform, func.count(Post.id))
         .where(post_filter)
@@ -114,11 +127,14 @@ async def analytics_overview(
 @router.get("/sentiment", response_model=list[SentimentBreakdown])
 async def sentiment_breakdown(
     listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
+    days: int | None = Query(None, ge=1, le=90, description="Filter to last N days"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get sentiment breakdown with percentages."""
     parsed_ids = parse_listener_ids(listener_ids)
-    post_filter = build_listener_filter(parsed_ids)
+    listener_filter = build_listener_filter(parsed_ids)
+    date_filter = build_date_filter(days)
+    post_filter = and_(listener_filter, date_filter) if days else listener_filter
 
     query = (
         select(Post.sentiment_label, func.count(Post.id).label("count"))
@@ -242,11 +258,14 @@ async def top_authors(
 @router.get("/engagement")
 async def engagement_stats(
     listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
+    days: int | None = Query(None, ge=1, le=90, description="Filter to last N days"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get engagement statistics."""
     parsed_ids = parse_listener_ids(listener_ids)
-    post_filter = build_listener_filter(parsed_ids)
+    listener_filter = build_listener_filter(parsed_ids)
+    date_filter = build_date_filter(days)
+    post_filter = and_(listener_filter, date_filter) if days else listener_filter
 
     query = select(
         func.sum(Post.likes_count).label("total_likes"),

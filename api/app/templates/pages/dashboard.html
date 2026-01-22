@@ -189,17 +189,21 @@ function getSelectedDays() {
 async function loadDashboardData() {
     const listenerIds = getSelectedListenerIds();
     const days = getSelectedDays();
-    const params = listenerIds ? `?listener_ids=${listenerIds}` : '';
-    const timelineParams = params ? `${params}&days=${days}` : `?days=${days}`;
+
+    // Build params - all endpoints now support days filter
+    let params = `?days=${days}`;
+    if (listenerIds) {
+        params += `&listener_ids=${listenerIds}`;
+    }
 
     // Update timeline title
     document.getElementById('timeline-title').textContent = `Posts Timeline (Last ${days} Days)`;
 
-    // Load all data in parallel
+    // Load all data in parallel - all endpoints now filter by days
     const [overviewResponse, sentimentResponse, timelineResponse, engagementResponse] = await Promise.all([
         fetch(`/api/analytics/overview${params}`),
         fetch(`/api/analytics/sentiment${params}`),
-        fetch(`/api/analytics/timeline${timelineParams}`),
+        fetch(`/api/analytics/timeline${params}`),
         fetch(`/api/analytics/engagement${params}`)
     ]);
 
