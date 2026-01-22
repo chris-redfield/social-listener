@@ -13,12 +13,14 @@
     <div class="card-body">
         <form id="filterForm" class="row g-3">
             <div class="col-md-3">
-                <label class="form-label">Search</label>
-                <input type="text" class="form-control" name="search" placeholder="Search content...">
+                <label class="form-label">Listener</label>
+                <select class="form-select" name="listener_id" id="listenerFilter">
+                    <option value="">All</option>
+                </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <label class="form-label">Sentiment</label>
-                <select class="form-select" name="sentiment">
+                <select class="form-select" name="sentiment_label">
                     <option value="">All</option>
                     <option value="positive">Positive</option>
                     <option value="neutral">Neutral</option>
@@ -26,14 +28,8 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label">Listener</label>
-                <select class="form-select" name="listener_id" id="listenerFilter">
-                    <option value="">All</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Limit</label>
-                <select class="form-select" name="limit">
+                <label class="form-label">Per Page</label>
+                <select class="form-select" name="page_size">
                     <option value="25">25</option>
                     <option value="50" selected>50</option>
                     <option value="100">100</option>
@@ -41,7 +37,7 @@
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search me-1"></i> Filter
+                    <i class="bi bi-funnel me-1"></i> Filter
                 </button>
             </div>
         </form>
