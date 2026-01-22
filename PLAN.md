@@ -125,8 +125,8 @@ Even though Bluesky offers real-time firehose, we'll use **polling for both plat
 │              │                         │                             │  │
 │              │                         │  ┌───────────────────────┐  │  │
 │              │                         │  │  NLP Processor        │  │  │
-│              │                         │  │  • Sentiment (TextBlob)│  │  │
-│              │                         │  │  • NER (spaCy)        │  │  │
+│              │                         │  │ • Sentiment (TextBlob)│  │  │
+│              │                         │  │ • NER (spaCy)         │  │  │
 │              │                         │  │  [Phase 2]            │  │  │
 │              │                         │  └───────────────────────┘  │  │
 │              │                         │                             │  │
