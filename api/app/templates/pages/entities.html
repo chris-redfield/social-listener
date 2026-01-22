@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1><i class="bi bi-tags me-2"></i>Entities</h1>
+        <p class="text-muted">Explore extracted named entities from posts</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-auto">
+                <label class="form-label mb-0"><i class="bi bi-funnel me-1"></i>Filters:</label>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="listenerFilter">
+                    <option value="">All Listeners</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="entityTypeFilter">
+                    <option value="">All Types</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Entity Types Chart -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-pie-chart me-2"></i>Entity Types
+            </div>
+            <div class="card-body">
+                <div id="entity-types-chart" style="height: 250px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Entities -->
+    <div class="col-md-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-trophy me-2"></i>Top Entities
+            </div>
+            <div class="card-body" id="top-entities">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All Entities Table -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-list me-2"></i>All Entities
+    </div>
+    <div class="card-body">
+        <div id="entities-table">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ============ INITIALIZATION ============
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadListenersDropdown();
+    await loadTypesDropdown();
+    await refreshAll();
+});
+
+// ============ DROPDOWN LOADERS ============
+async function loadListenersDropdown() {
+    const response = await fetch('/api/listeners');
+    const listeners = await response.json();
+    const select = document.getElementById('listenerFilter');
+
+    listeners.forEach(l => {
+        const option = document.createElement('option');
+        option.value = l.id;
+        option.textContent = l.name;
+        select.appendChild(option);
+    });
+}
+
+async function loadTypesDropdown() {
+    const response = await fetch('/api/entities/types');
+    const types = await response.json();
+    const select = document.getElementById('entityTypeFilter');
+
+    types.forEach(t => {
+        const option = document.createElement('option');
+        option.value = t.entity_type;
+        option.textContent = `${t.entity_type} (${t.count})`;
+        select.appendChild(option);
+    });
+}
+
+// ============ FILTERS ============
+function getListenerId() {
+    return document.getElementById('listenerFilter').value || null;
+}
+
+function getEntityType() {
+    return document.getElementById('entityTypeFilter').value || null;
+}
+
+// ============ DATA LOADERS ============
+async function refreshAll() {
+    await Promise.all([
+        refreshChart(),
+        refreshTopEntities(),
+        refreshTable()
+    ]);
+}
+
+async function refreshChart() {
+    const listenerId = getListenerId();
+
+    let chartData = [];
+
+    try {
+        if (listenerId) {
+            // Fetch from /top with listener filter, aggregate by type
+            const params = new URLSearchParams();
+            params.append('limit', '500');
+            params.append('listener_id', listenerId);
+
+            const response = await fetch(`/api/entities/top?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`API returned ${response.status}`);
+            }
+            const entities = await response.json();
+
+            // Aggregate occurrences by type
+            const typeCounts = {};
+            entities.forEach(e => {
+                typeCounts[e.entity_type] = (typeCounts[e.entity_type] || 0) + e.occurrence_count;
+            });
+
+            chartData = Object.entries(typeCounts)
+                .map(([entity_type, count]) => ({ entity_type, count }))
+                .sort((a, b) => b.count - a.count);
+        } else {
+            // No listener filter, use /types directly
+            const response = await fetch('/api/entities/types');
+            if (!response.ok) {
+                throw new Error(`API returned ${response.status}`);
+            }
+            chartData = await response.json();
+        }
+
+        console.log('Chart data:', chartData);
+        renderEntityTypesChart(chartData);
+    } catch (error) {
+        console.error('Error loading chart:', error);
+        document.getElementById('entity-types-chart').innerHTML =
+            '<p class="text-muted text-center py-3">Error loading chart</p>';
+    }
+}
+
+async function refreshTopEntities() {
+    const listenerId = getListenerId();
+
+    const params = new URLSearchParams();
+    params.append('limit', '50');
+    if (listenerId) params.append('listener_id', listenerId);
+
+    console.log('Fetching top entities:', `/api/entities/top?${params.toString()}`);
+
+    const response = await fetch(`/api/entities/top?${params.toString()}`);
+    const entities = await response.json();
+
+    console.log('Top entities response:', entities);
+
+    const container = document.getElementById('top-entities');
+
+    if (!entities || entities.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-3">No entities found</p>';
+        return;
+    }
+
+    container.innerHTML = entities.map(entity => {
+        const typeClass = getEntityTypeClass(entity.entity_type);
+        return `
+            <span class="entity-tag ${typeClass}" title="${entity.entity_type}">
+                ${entity.display_text || entity.entity_text}
+                <span class="badge bg-dark ms-1">${entity.occurrence_count}</span>
+            </span>
+        `;
+    }).join('');
+}
+
+async function refreshTable() {
+    const listenerId = getListenerId();
+    const entityType = getEntityType();
+
+    const params = new URLSearchParams({ limit: '100' });
+    if (listenerId) params.append('listener_id', listenerId);
+    if (entityType) params.append('entity_type', entityType);
+
+    const response = await fetch(`/api/entities?${params}`);
+    const entities = await response.json();
+
+    const container = document.getElementById('entities-table');
+
+    if (!entities || entities.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-3">No entities found</p>';
+        return;
+    }
+
+    let html = `
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>Entity</th>
+                    <th>Type</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    entities.forEach(entity => {
+        const typeClass = getEntityTypeClass(entity.entity_type);
+        html += `
+            <tr>
+                <td><span class="entity-tag ${typeClass}">${entity.display_text || entity.entity_text}</span></td>
+                <td><code>${entity.entity_type}</code></td>
+                <td><small class="text-muted">${new Date(entity.created_at).toLocaleDateString()}</small></td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// ============ UTILITIES ============
+function getEntityTypeClass(type) {
+    const typeMap = {
+        'PER': 'entity-person',   // People
+        'ORG': 'entity-org',      // Organizations
+        'LOC': 'entity-loc',      // Locations
+        'MISC': 'entity-misc'     // Miscellaneous (products, works, etc.)
+    };
+    return typeMap[type] || 'entity-misc';
+}
+
+// ============ EVENT LISTENERS ============
+document.getElementById('listenerFilter').addEventListener('change', function() {
+    // Listener filter affects chart, top entities, and table
+    refreshChart();
+    refreshTopEntities();
+    refreshTable();
+});
+
+document.getElementById('entityTypeFilter').addEventListener('change', function() {
+    // Type filter only affects the table
+    refreshTable();
+});
+</script>
+{% endblock %}

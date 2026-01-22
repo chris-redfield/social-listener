@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+        <p class="text-muted">Overview of your social media monitoring</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4" id="stats-cards" hx-get="/api/analytics/overview" hx-trigger="load" hx-swap="innerHTML">
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-emoji-smile me-2"></i>Sentiment Breakdown
+            </div>
+            <div class="card-body">
+                <div id="sentiment-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-graph-up me-2"></i>Posts Timeline (Last 7 Days)
+            </div>
+            <div class="card-body">
+                <div id="timeline-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Authors -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>Top Authors
+            </div>
+            <div class="card-body">
+                <div id="authors-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-hand-thumbs-up me-2"></i>Engagement Stats
+            </div>
+            <div class="card-body" id="engagement-stats" hx-get="/api/analytics/engagement" hx-trigger="load" hx-swap="innerHTML">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardCharts();
+});
+
+async function loadDashboardCharts() {
+    // Load sentiment chart
+    const sentimentResponse = await fetch('/api/analytics/sentiment');
+    const sentimentData = await sentimentResponse.json();
+    renderSentimentChart(sentimentData);
+
+    // Load timeline chart
+    const timelineResponse = await fetch('/api/analytics/timeline?days=7');
+    const timelineData = await timelineResponse.json();
+    renderTimelineChart(timelineData);
+
+    // Load authors chart
+    const authorsResponse = await fetch('/api/analytics/authors?limit=10');
+    const authorsData = await authorsResponse.json();
+    renderAuthorsChart(authorsData);
+}
+
+// HTMX after-swap handler for stats cards
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'stats-cards') {
+        const data = JSON.parse(event.detail.xhr.responseText);
+        renderStatsCards(data);
+    }
+    if (event.detail.target.id === 'engagement-stats') {
+        const data = JSON.parse(event.detail.xhr.responseText);
+        renderEngagementStats(data);
+    }
+});
+
+function renderStatsCards(data) {
+    const container = document.getElementById('stats-cards');
+    container.innerHTML = `
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-chat-square-text me-2"></i>Total Posts</h6>
+                    <h2 class="mb-0">${data.total_posts || 0}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-ear me-2"></i>Active Listeners</h6>
+                    <h2 class="mb-0">${data.total_listeners || 0}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-tags me-2"></i>Entities Extracted</h6>
+                    <h2 class="mb-0">${data.total_entities || 0}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-calendar-day me-2"></i>Posts Today</h6>
+                    <h2 class="mb-0">${data.posts_today || 0}</h2>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderEngagementStats(data) {
+    const container = document.getElementById('engagement-stats');
+    container.innerHTML = `
+        <div class="row text-center">
+            <div class="col-4">
+                <h4 class="text-primary">${data.total_likes || 0}</h4>
+                <small class="text-muted">Total Likes</small>
+            </div>
+            <div class="col-4">
+                <h4 class="text-success">${data.total_replies || 0}</h4>
+                <small class="text-muted">Total Replies</small>
+            </div>
+            <div class="col-4">
+                <h4 class="text-info">${data.total_reposts || 0}</h4>
+                <small class="text-muted">Total Reposts</small>
+            </div>
+        </div>
+        <hr>
+        <div class="row text-center">
+            <div class="col-4">
+                <h5>${data.avg_likes || 0}</h5>
+                <small class="text-muted">Avg Likes</small>
+            </div>
+            <div class="col-4">
+                <h5>${data.avg_replies || 0}</h5>
+                <small class="text-muted">Avg Replies</small>
+            </div>
+            <div class="col-4">
+                <h5>${data.avg_reposts || 0}</h5>
+                <small class="text-muted">Avg Reposts</small>
+            </div>
+        </div>
+    `;
+}
+</script>
+{% endblock %}

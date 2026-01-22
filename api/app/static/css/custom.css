@@ -1,0 +1,151 @@
+/* Social Listener Custom Styles */
+
+body {
+    background-color: #f8f9fa;
+}
+
+/* Cards */
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    font-weight: 600;
+}
+
+/* Sentiment badges */
+.badge-sentiment-positive {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-sentiment-negative {
+    background-color: #dc3545;
+    color: white;
+}
+
+.badge-sentiment-neutral {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* Platform badges */
+.badge-bluesky {
+    background-color: #0085ff;
+    color: white;
+}
+
+.badge-threads {
+    background-color: #000000;
+    color: white;
+}
+
+/* Status indicators */
+.status-active {
+    color: #28a745;
+}
+
+.status-inactive {
+    color: #dc3545;
+}
+
+/* New content indicator */
+.new-content-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #ffc107;
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Table styling */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Post card styling */
+.post-card {
+    transition: transform 0.2s;
+}
+
+.post-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Entity tags */
+.entity-tag {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    margin: 0.1rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.entity-person {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.entity-org {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.entity-loc {
+    background-color: #e8f5e9;
+    color: #388e3c;
+}
+
+.entity-misc {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+/* Loading spinner overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+/* HTMX loading indicator */
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator {
+    display: inline-block;
+}
+
+.htmx-request.htmx-indicator {
+    display: inline-block;
+}
+
+/* Navbar adjustments */
+.navbar-brand i {
+    color: #0085ff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card h2 {
+        font-size: 1.5rem;
+    }
+}

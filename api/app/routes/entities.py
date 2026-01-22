@@ -12,18 +12,28 @@ router = APIRouter()
 @router.get("", response_model=list[EntityResponse])
 async def list_entities(
     entity_type: str | None = None,
+    listener_id: int | None = None,
     search: str | None = Query(None, description="Search in entity text"),
     limit: int = Query(100, ge=1, le=500),
     session: AsyncSession = Depends(get_session),
 ):
     """List all unique entities."""
-    query = select(Entity).order_by(Entity.created_at.desc()).limit(limit)
+    query = select(Entity).order_by(Entity.created_at.desc())
+
+    if listener_id:
+        query = (
+            query.join(PostEntity, Entity.id == PostEntity.entity_id)
+            .join(Post, PostEntity.post_id == Post.id)
+            .where(Post.listener_id == listener_id)
+            .distinct()
+        )
 
     if entity_type:
         query = query.where(Entity.entity_type == entity_type)
     if search:
         query = query.where(Entity.entity_text.ilike(f"%{search}%"))
 
+    query = query.limit(limit)
     result = await session.execute(query)
     return result.scalars().all()
 
@@ -32,7 +42,7 @@ async def list_entities(
 async def top_entities(
     entity_type: str | None = None,
     listener_id: int | None = None,
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=500),
     session: AsyncSession = Depends(get_session),
 ):
     """Get top entities by occurrence count."""
@@ -52,14 +62,15 @@ async def top_entities(
             Post.listener_id == listener_id
         )
 
+    # Apply entity_type filter BEFORE group_by
+    if entity_type:
+        query = query.where(Entity.entity_type == entity_type)
+
     query = (
-        query.group_by(Entity.id)
+        query.group_by(Entity.id, Entity.entity_type, Entity.entity_text, Entity.display_text)
         .order_by(func.count(PostEntity.id).desc())
         .limit(limit)
     )
-
-    if entity_type:
-        query = query.where(Entity.entity_type == entity_type)
 
     result = await session.execute(query)
     rows = result.all()

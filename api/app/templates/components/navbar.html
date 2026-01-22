@@ -1,0 +1,45 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <i class="bi bi-broadcast-pin me-2"></i>
+            Social Listener
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link {% if page_title == 'Dashboard' %}active{% endif %}" href="/">
+                        <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if page_title == 'Listeners' %}active{% endif %}" href="/listeners">
+                        <i class="bi bi-ear me-1"></i> Listeners
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if page_title == 'Posts' %}active{% endif %}" href="/posts">
+                        <i class="bi bi-chat-square-text me-1"></i> Posts
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if page_title == 'Entities' %}active{% endif %}" href="/entities">
+                        <i class="bi bi-tags me-1"></i> Entities
+                    </a>
+                </li>
+            </ul>
+
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="/docs" target="_blank">
+                        <i class="bi bi-file-code me-1"></i> API Docs
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

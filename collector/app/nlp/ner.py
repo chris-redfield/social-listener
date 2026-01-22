@@ -29,16 +29,13 @@ class EntityResult:
     confidence: float  # spaCy doesn't provide confidence, so we use 1.0
 
 
-# Entity types we care about for social media monitoring
+# Entity types from pt_core_news_sm (Portuguese model)
+# Note: Portuguese model uses different labels than English models
 RELEVANT_ENTITY_TYPES = {
-    "PERSON",  # People, including fictional
-    "ORG",  # Companies, agencies, institutions
-    "GPE",  # Countries, cities, states (Geo-Political Entity)
-    "PRODUCT",  # Objects, vehicles, foods, etc.
-    "EVENT",  # Named events
-    "WORK_OF_ART",  # Titles of books, songs, etc.
-    "LOC",  # Non-GPE locations
-    "FAC",  # Buildings, airports, highways, etc.
+    "PER",   # People (Portuguese model uses PER, not PERSON)
+    "ORG",   # Companies, agencies, institutions
+    "LOC",   # Locations (includes cities, countries, places - GPE equivalent)
+    "MISC",  # Miscellaneous (products, works of art, events, etc.)
 }
 
 

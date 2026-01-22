@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1><i class="bi bi-ear me-2"></i>Listeners</h1>
+        <p class="text-muted">Manage your social media monitoring rules</p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createListenerModal">
+            <i class="bi bi-plus-lg me-1"></i> New Listener
+        </button>
+    </div>
+</div>
+
+<!-- Listeners Table -->
+<div class="card">
+    <div class="card-body">
+        <div id="listeners-table" hx-get="/api/listeners" hx-trigger="load" hx-swap="innerHTML">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Listener Modal -->
+<div class="modal fade" id="createListenerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Listener</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createListenerForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Platform</label>
+                        <select class="form-select" name="platform" required>
+                            <option value="bluesky">Bluesky</option>
+                            <option value="threads" disabled>Threads (coming soon)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rule Type</label>
+                        <select class="form-select" name="rule_type" required>
+                            <option value="keyword">Keyword</option>
+                            <option value="hashtag">Hashtag</option>
+                            <option value="mention">Mention (@handle)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rule Value</label>
+                        <input type="text" class="form-control" name="rule_value" required
+                               placeholder="e.g., brand name, #hashtag, or handle.bsky.social">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Listener</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Listener Modal -->
+<div class="modal fade" id="editListenerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Listener</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editListenerForm">
+                <input type="hidden" name="id" id="editListenerId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" name="name" id="editName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Platform</label>
+                        <select class="form-select" name="platform" id="editPlatform" required>
+                            <option value="bluesky">Bluesky</option>
+                            <option value="threads" disabled>Threads (coming soon)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rule Type</label>
+                        <select class="form-select" name="rule_type" id="editRuleType" required>
+                            <option value="keyword">Keyword</option>
+                            <option value="hashtag">Hashtag</option>
+                            <option value="mention">Mention (@handle)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rule Value</label>
+                        <input type="text" class="form-control" name="rule_value" id="editRuleValue" required
+                               placeholder="e.g., brand name, #hashtag, or handle.bsky.social">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'listeners-table') {
+        const data = JSON.parse(event.detail.xhr.responseText);
+        renderListenersTable(data);
+    }
+});
+
+async function loadListenersTable() {
+    const response = await fetch('/api/listeners');
+    const data = await response.json();
+    renderListenersTable(data);
+}
+
+function renderListenersTable(listeners) {
+    const container = document.getElementById('listeners-table');
+
+    if (!listeners || listeners.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1"></i>
+                <p class="mt-2">No listeners yet. Create your first one!</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Platform</th>
+                    <th>Rule</th>
+                    <th>Status</th>
+                    <th>Last Polled</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    listeners.forEach(listener => {
+        const statusBadge = listener.is_active
+            ? '<span class="badge bg-success">Active</span>'
+            : '<span class="badge bg-secondary">Inactive</span>';
+
+        const newContentDot = listener.has_new_content
+            ? '<span class="new-content-dot ms-2" title="New content"></span>'
+            : '';
+
+        const lastPolled = listener.last_polled_at
+            ? new Date(listener.last_polled_at).toLocaleString()
+            : 'Never';
+
+        html += `
+            <tr>
+                <td>${listener.name}${newContentDot}</td>
+                <td><span class="badge badge-${listener.platform}">${listener.platform}</span></td>
+                <td><code>${listener.rule_type}: ${listener.rule_value}</code></td>
+                <td>${statusBadge}</td>
+                <td><small class="text-muted">${lastPolled}</small></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-success me-1" onclick="collectListener(${listener.id})" title="Collect Now" ${listener.is_active ? '' : 'disabled'}>
+                        <i class="bi bi-cloud-download"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary me-1" onclick="editListener(${listener.id})" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="toggleListener(${listener.id})" title="${listener.is_active ? 'Pause' : 'Resume'}">
+                        <i class="bi bi-${listener.is_active ? 'pause' : 'play'}"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteListener(${listener.id})" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+async function toggleListener(id) {
+    await fetch(`/api/listeners/${id}/toggle`, { method: 'POST' });
+    await loadListenersTable();
+}
+
+async function collectListener(id) {
+    showToast('Starting collection...', 'info');
+
+    try {
+        const response = await fetch(`/api/listeners/${id}/collect`, { method: 'POST' });
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast(`Collected ${data.posts_collected || 0} posts`, 'success');
+            await loadListenersTable();
+        } else {
+            showToast(data.detail || 'Collection failed', 'danger');
+        }
+    } catch (error) {
+        showToast('Collection failed: ' + error.message, 'danger');
+    }
+}
+
+async function deleteListener(id) {
+    if (confirm('Are you sure you want to delete this listener?')) {
+        await fetch(`/api/listeners/${id}`, { method: 'DELETE' });
+        await loadListenersTable();
+    }
+}
+
+async function editListener(id) {
+    // Fetch fresh data from API
+    const response = await fetch(`/api/listeners/${id}`);
+    const listener = await response.json();
+
+    document.getElementById('editListenerId').value = listener.id;
+    document.getElementById('editName').value = listener.name;
+    document.getElementById('editPlatform').value = listener.platform;
+    document.getElementById('editRuleType').value = listener.rule_type;
+    document.getElementById('editRuleValue').value = listener.rule_value;
+
+    const modal = new bootstrap.Modal(document.getElementById('editListenerModal'));
+    modal.show();
+}
+
+document.getElementById('editListenerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const id = document.getElementById('editListenerId').value;
+    const data = {
+        name: document.getElementById('editName').value,
+        platform: document.getElementById('editPlatform').value,
+        rule_type: document.getElementById('editRuleType').value,
+        rule_value: document.getElementById('editRuleValue').value,
+    };
+
+    const response = await fetch(`/api/listeners/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    bootstrap.Modal.getInstance(document.getElementById('editListenerModal')).hide();
+
+    if (response.ok) {
+        showToast('Listener updated successfully', 'success');
+        await loadListenersTable();
+    } else {
+        showToast('Failed to update listener', 'danger');
+    }
+});
+
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+    const toastId = 'toast-' + Date.now();
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastEl = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1100';
+    document.body.appendChild(container);
+    return container;
+}
+
+document.getElementById('createListenerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
+
+    const response = await fetch('/api/listeners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    bootstrap.Modal.getInstance(document.getElementById('createListenerModal')).hide();
+    form.reset();
+
+    if (response.ok) {
+        showToast('Listener created successfully', 'success');
+        await loadListenersTable();
+    } else {
+        showToast('Failed to create listener', 'danger');
+    }
+});
+</script>
+{% endblock %}

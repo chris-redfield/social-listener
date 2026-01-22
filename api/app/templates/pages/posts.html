@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1><i class="bi bi-chat-square-text me-2"></i>Posts</h1>
+        <p class="text-muted">Browse collected social media posts</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" name="search" placeholder="Search content...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Sentiment</label>
+                <select class="form-select" name="sentiment">
+                    <option value="">All</option>
+                    <option value="positive">Positive</option>
+                    <option value="neutral">Neutral</option>
+                    <option value="negative">Negative</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Listener</label>
+                <select class="form-select" name="listener_id" id="listenerFilter">
+                    <option value="">All</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Limit</label>
+                <select class="form-select" name="limit">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Posts List -->
+<div id="posts-list" class="row">
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadListeners();
+    loadPosts();
+});
+
+async function loadListeners() {
+    const response = await fetch('/api/listeners');
+    const listeners = await response.json();
+    const select = document.getElementById('listenerFilter');
+
+    listeners.forEach(l => {
+        const option = document.createElement('option');
+        option.value = l.id;
+        option.textContent = l.name;
+        select.appendChild(option);
+    });
+}
+
+async function loadPosts(params = {}) {
+    const container = document.getElementById('posts-list');
+    container.innerHTML = `
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+
+    const queryParams = new URLSearchParams(params);
+    const response = await fetch(`/api/posts?${queryParams}`);
+    const data = await response.json();
+
+    renderPosts(data.items || data);
+}
+
+function renderPosts(posts) {
+    const container = document.getElementById('posts-list');
+
+    if (!posts || posts.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1"></i>
+                <p class="mt-2">No posts found</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = posts.map(post => `
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card post-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <strong>${post.author_display_name || 'Unknown'}</strong>
+                            <br><small class="text-muted">@${post.author_handle || 'unknown'}</small>
+                        </div>
+                        <span class="badge badge-sentiment-${post.sentiment_label || 'neutral'}">
+                            ${post.sentiment_label || 'N/A'}
+                        </span>
+                    </div>
+                    <p class="card-text">${truncateText(post.content, 200)}</p>
+                    <div class="d-flex justify-content-between text-muted small">
+                        <span>
+                            <i class="bi bi-heart me-1"></i>${post.likes_count || 0}
+                            <i class="bi bi-chat ms-2 me-1"></i>${post.replies_count || 0}
+                            <i class="bi bi-repeat ms-2 me-1"></i>${post.reposts_count || 0}
+                        </span>
+                        <span>${formatDate(post.post_created_at)}</span>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="${post.url || '#'}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>View Original
+                    </a>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+}
+
+document.getElementById('filterForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const params = {};
+
+    new FormData(form).forEach((value, key) => {
+        if (value) params[key] = value;
+    });
+
+    loadPosts(params);
+});
+</script>
+{% endblock %}

@@ -14,6 +14,9 @@ class ListenerCreate(BaseModel):
 
 class ListenerUpdate(BaseModel):
     name: str | None = None
+    platform: Literal["threads", "bluesky", "all"] | None = None
+    rule_type: Literal["keyword", "mention", "hashtag"] | None = None
+    rule_value: str | None = None
     is_active: bool | None = None
     poll_frequency: int | None = None
 

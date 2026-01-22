@@ -1,3 +1,4 @@
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,9 @@ from app.models import Listener, Post
 from app.schemas import ListenerCreate, ListenerUpdate, ListenerResponse
 
 router = APIRouter()
+
+# Collector service URL (internal Docker network)
+COLLECTOR_URL = "http://collector:8001"
 
 
 @router.get("", response_model=list[ListenerResponse])
@@ -149,3 +153,35 @@ async def acknowledge_new_content(
     await session.commit()
     await session.refresh(listener)
     return listener
+
+
+@router.post("/{listener_id}/collect")
+async def trigger_collection(
+    listener_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    """Trigger collection for a specific listener."""
+    # Verify listener exists
+    result = await session.execute(select(Listener).where(Listener.id == listener_id))
+    listener = result.scalar_one_or_none()
+    if not listener:
+        raise HTTPException(status_code=404, detail="Listener not found")
+
+    if not listener.is_active:
+        raise HTTPException(status_code=400, detail="Listener is not active")
+
+    # Call collector service
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{COLLECTOR_URL}/collect/bluesky",
+                json={"listener_id": listener_id},
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Collection timed out")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to trigger collection: {str(e)}")
