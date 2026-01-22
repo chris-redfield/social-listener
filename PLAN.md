@@ -46,12 +46,12 @@ A social media monitoring tool that tracks brand mentions, keywords, and convers
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Keyword Search | ✅ Available | 500 queries per 7-day rolling window (~70/day) |
-| Mentions Retrieval | ✅ Available | Public posts that mention authenticated account |
-| Webhooks | ⚠️ Partial | Only for reply events, not general mentions |
-| Analytics | ✅ Available | Views, likes, replies, reposts, shares, clicks |
-| Rate Limits | ⚠️ Strict | 250 posts/day, 1000 replies/day for publishing |
-| Auth Required | ✅ Yes | Meta Business account + OAuth + App Review |
+| Keyword Search | Available | 500 queries per 7-day rolling window (~70/day) |
+| Mentions Retrieval | Available | Public posts that mention authenticated account |
+| Webhooks | Partial | Only for reply events, not general mentions |
+| Analytics | Available | Views, likes, replies, reposts, shares, clicks |
+| Rate Limits | Strict | 250 posts/day, 1000 replies/day for publishing |
+| Auth Required | Yes | Meta Business account + OAuth + App Review |
 
 **API Endpoints We'll Use:**
 - `GET /threads_search` - Search public posts by keyword
@@ -68,11 +68,11 @@ A social media monitoring tool that tracks brand mentions, keywords, and convers
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Firehose | ✅ Available | Real-time stream of ALL posts (~1000+ events/sec) |
-| Jetstream | ✅ Available | Simplified JSON stream (easier than raw firehose) |
-| Search API | ✅ Available | `app.bsky.feed.searchPosts` endpoint |
-| Auth for Reading | ❌ Not Required | Can read public data anonymously |
-| Rate Limits | ✅ Generous | Especially for reading operations |
+| Firehose | Available | Real-time stream of ALL posts (~1000+ events/sec) |
+| Jetstream | Available | Simplified JSON stream (easier than raw firehose) |
+| Search API | Available | `app.bsky.feed.searchPosts` endpoint |
+| Auth for Reading | Not Required | Can read public data anonymously |
+| Rate Limits | Generous | Especially for reading operations |
 
 **API Endpoints We'll Use:**
 - `app.bsky.feed.searchPosts` - Search posts by keyword
@@ -184,7 +184,7 @@ CREATE TABLE listeners (
     rule_type       VARCHAR(50) NOT NULL,  -- 'keyword' | 'mention' | 'hashtag'
     rule_value      VARCHAR(500) NOT NULL, -- The actual keyword/handle to monitor
     is_active       BOOLEAN DEFAULT true,
-    has_new_content BOOLEAN DEFAULT false, -- Flag for "content captured ✅"
+    has_new_content BOOLEAN DEFAULT false, -- Flag for "new content available"
     poll_frequency  INTEGER DEFAULT 300,   -- Seconds between polls
     last_polled_at  TIMESTAMP,
     created_at      TIMESTAMP DEFAULT NOW(),
@@ -497,7 +497,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 ## 7. Development Phases
 
-### Phase 1: Foundation (MVP) ✅ COMPLETE
+### Phase 1: Foundation (MVP) - COMPLETE
 
 **Goal:** Basic working system with one platform
 
@@ -509,7 +509,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 - [x] Simple capture storage with deduplication
 - [ ] Basic HTML interface (deferred to Phase 4)
 
-**Timeline:** 1 session ✅
+**Timeline:** 1 session (done)
 
 ### Phase 2: Threads Integration
 
@@ -523,7 +523,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 **Timeline:** 1-2 sessions
 
-### Phase 3: NLP Pipeline ✅ COMPLETE
+### Phase 3: NLP Pipeline - COMPLETE
 
 **Goal:** Add sentiment analysis and entity extraction
 
@@ -534,17 +534,21 @@ class PaginatedResponse(BaseModel, Generic[T]):
 - [x] Inline processing during collection
 - [x] NLP error tracking (failsafe, non-blocking)
 
-**Timeline:** 1 session ✅
+**Timeline:** 1 session (done)
 
-### Phase 4: Analytics & UI 🔄 IN PROGRESS
+### Phase 4: Analytics & UI - MOSTLY COMPLETE
 
 **Goal:** Rich analytics and improved interface
 
 **Deliverables:**
 - [x] Analytics endpoints (overview, sentiment, timeline, authors, engagement)
-- [ ] Dashboard with charts
-- [ ] Export functionality (CSV/JSON)
+- [x] Dashboard with Plotly charts (sentiment pie, timeline bar chart)
+- [x] Listener management UI (create, edit, delete, toggle, collect)
+- [x] Posts browser with filters and pagination
+- [x] Entities explorer with type/listener filters
+- [x] Dashboard listener filter (multi-select)
 - [x] "New content" flag system
+- [ ] Export functionality (CSV/JSON)
 
 **Timeline:** 1-2 sessions
 
@@ -764,7 +768,8 @@ settings = Settings()
   - Make configurable via `BLUESKY_SEARCH_LIMIT` env var
   - Add pagination support to fetch all results via cursor
 - [ ] **Reprocess endpoint**: Add `POST /posts/reprocess` to re-run NLP on existing posts
-- [ ] **Listener update endpoint**: Add `PUT /listeners/{id}` to update listener settings
+- [x] **Listener update endpoint**: Add `PUT /listeners/{id}` to update listener settings
+- [x] **Manual collection trigger**: Add `POST /listeners/{id}/collect` to trigger collection from UI
 - [ ] **Language detection + multi-language NLP**: Detect post language and use appropriate models
   - Use `langdetect` or `lingua` for language detection
   - Load multiple spaCy models (en, pt, es, etc.)
@@ -776,6 +781,7 @@ settings = Settings()
   - Skip common words misclassified as ORG/LOC
   - Add minimum entity length filter
   - Consider entity type whitelist per context
+- [ ] **Export functionality**: Add CSV/JSON export for posts and analytics
 
 ### 10.2 Platform Expansion
 
@@ -943,9 +949,37 @@ curl http://localhost:8000/api/analytics/overview
 - **Active listeners:** Lula Oficial, Netflix Brasil
 - **Stats:** 100 posts, 187 entities, sentiment analysis working
 
-### Session 3 - [Date]
-- [ ] Dashboard UI (HTML/Jinja2)
+### Session 3 - January 22, 2026 (Frontend UI)
+- [x] Jinja2 + HTMX + Bootstrap 5 frontend setup
+- [x] Plotly.js chart integration
+- [x] Dashboard page with:
+  - Stats cards (posts, listeners, entities, posts today)
+  - Sentiment breakdown pie chart
+  - Posts timeline bar chart (stacked by sentiment)
+  - Engagement stats section
+  - Multi-select listener filter
+- [x] Listeners management page with:
+  - Table view with status badges
+  - Create/Edit/Delete functionality
+  - Toggle active status
+  - Manual "Collect Now" trigger
+  - New content indicators
+- [x] Posts browser with:
+  - Pagination
+  - Filter by listener, sentiment, search
+  - Post cards with author, content, sentiment badge
+- [x] Entities explorer with:
+  - Entity type distribution pie chart
+  - Top entities table
+  - Filter by listener and entity type
+- [x] Fixed timeline API (reuse date_col expression for GROUP BY)
+- [x] Fixed Portuguese NER labels (PER, ORG, LOC, MISC)
+- [x] API proxy for collector service (trigger collection from UI)
+- [x] Multi-listener filter support in analytics endpoints
+
+### Session 4 - [Date]
 - [ ] Export functionality (CSV/JSON)
+- [ ] Threads platform integration
 - [ ] ...
 
 ---
@@ -961,7 +995,9 @@ curl http://localhost:8000/api/analytics/overview
 | Entity relationship | M:N | Same entity in multiple posts | Jan 2026 |
 | Dev order | Bluesky first | No OAuth bureaucracy | Jan 2026 |
 | NLP loading | FastAPI lifespan | Load once at startup | Jan 2026 |
-| NLP MVP models | TextBlob + spaCy sm | Lighter, faster iteration | Jan 2026 |
+| NLP MVP models | LeIA + spaCy pt | Portuguese support, lighter models | Jan 2026 |
+| Frontend stack | Jinja2 + HTMX + Bootstrap 5 | Server-rendered, no JS framework | Jan 2026 |
+| Charts | Plotly.js | Interactive, easy to use, no build step | Jan 2026 |
 
 ---
 

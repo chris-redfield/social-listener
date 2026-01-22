@@ -6,10 +6,23 @@
         <h1><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
         <p class="text-muted">Overview of your social media monitoring</p>
     </div>
+    <div class="col-auto">
+        <div class="d-flex align-items-center">
+            <label class="me-2 text-muted">Filter by Listener:</label>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="listenerFilterBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    All Listeners
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" id="listenerFilterMenu" style="min-width: 250px;">
+                    <!-- Options loaded dynamically -->
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Stats Cards -->
-<div class="row mb-4" id="stats-cards" hx-get="/api/analytics/overview" hx-trigger="load" hx-swap="innerHTML">
+<div class="row mb-4" id="stats-cards">
     <div class="col-12 text-center py-5">
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
@@ -48,7 +61,7 @@
             <div class="card-header">
                 <i class="bi bi-hand-thumbs-up me-2"></i>Engagement Stats
             </div>
-            <div class="card-body" id="engagement-stats" hx-get="/api/analytics/engagement" hx-trigger="load" hx-swap="innerHTML">
+            <div class="card-body" id="engagement-stats">
                 <div class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -62,37 +75,149 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    loadDashboardCharts();
+// Store listeners data for reference
+let allListeners = [];
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Load listeners for the filter dropdown
+    await loadListenerFilter();
+    // Load initial dashboard data
+    loadDashboardData();
 });
 
-async function loadDashboardCharts() {
-    // Load sentiment chart
-    const sentimentResponse = await fetch('/api/analytics/sentiment');
-    const sentimentData = await sentimentResponse.json();
-    renderSentimentChart(sentimentData);
+async function loadListenerFilter() {
+    const response = await fetch('/api/listeners');
+    allListeners = await response.json();
 
-    // Load timeline chart
-    const timelineResponse = await fetch('/api/analytics/timeline?days=7');
-    const timelineData = await timelineResponse.json();
-    console.log('Timeline data:', timelineData);
-    renderTimelineChart(timelineData);
+    const menu = document.getElementById('listenerFilterMenu');
+    menu.innerHTML = '';
+
+    // Add "All Listeners" option
+    const allItem = document.createElement('li');
+    allItem.innerHTML = `
+        <label class="dropdown-item">
+            <input type="checkbox" class="form-check-input me-2" id="listener-all" checked>
+            <span>All Listeners</span>
+        </label>
+    `;
+    menu.appendChild(allItem);
+
+    // Add divider
+    const divider = document.createElement('li');
+    divider.innerHTML = '<hr class="dropdown-divider">';
+    menu.appendChild(divider);
+
+    // Add individual listeners
+    allListeners.forEach(listener => {
+        const item = document.createElement('li');
+        item.innerHTML = `
+            <label class="dropdown-item">
+                <input type="checkbox" class="form-check-input me-2 listener-checkbox" value="${listener.id}" data-name="${listener.name}">
+                <span>${listener.name}</span>
+            </label>
+        `;
+        menu.appendChild(item);
+    });
+
+    // Handle "All Listeners" checkbox
+    document.getElementById('listener-all').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.listener-checkbox');
+        if (this.checked) {
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+        updateFilterButton();
+        loadDashboardData();
+    });
+
+    // Handle individual listener checkboxes
+    document.querySelectorAll('.listener-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const allCheckbox = document.getElementById('listener-all');
+            const anyChecked = document.querySelectorAll('.listener-checkbox:checked').length > 0;
+            allCheckbox.checked = !anyChecked;
+            updateFilterButton();
+            loadDashboardData();
+        });
+    });
 }
 
-// HTMX after-swap handler for stats cards
-document.body.addEventListener('htmx:afterSwap', function(event) {
-    if (event.detail.target.id === 'stats-cards') {
-        const data = JSON.parse(event.detail.xhr.responseText);
-        renderStatsCards(data);
+function updateFilterButton() {
+    const btn = document.getElementById('listenerFilterBtn');
+    const selected = getSelectedListenerNames();
+
+    if (selected.length === 0) {
+        btn.textContent = 'All Listeners';
+    } else if (selected.length === 1) {
+        btn.textContent = selected[0];
+    } else {
+        btn.textContent = `${selected.length} Listeners`;
     }
-    if (event.detail.target.id === 'engagement-stats') {
-        const data = JSON.parse(event.detail.xhr.responseText);
-        renderEngagementStats(data);
-    }
-});
+}
+
+function getSelectedListenerIds() {
+    const checkboxes = document.querySelectorAll('.listener-checkbox:checked');
+    const ids = Array.from(checkboxes).map(cb => cb.value);
+    return ids.join(',');
+}
+
+function getSelectedListenerNames() {
+    const checkboxes = document.querySelectorAll('.listener-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.dataset.name);
+}
+
+async function loadDashboardData() {
+    const listenerIds = getSelectedListenerIds();
+    const params = listenerIds ? `?listener_ids=${listenerIds}` : '';
+
+    // Load all data in parallel
+    const [overviewResponse, sentimentResponse, timelineResponse, engagementResponse] = await Promise.all([
+        fetch(`/api/analytics/overview${params}`),
+        fetch(`/api/analytics/sentiment${params}`),
+        fetch(`/api/analytics/timeline${params}&days=7`.replace('&', params ? '&' : '?')),
+        fetch(`/api/analytics/engagement${params}`)
+    ]);
+
+    const [overviewData, sentimentData, timelineData, engagementData] = await Promise.all([
+        overviewResponse.json(),
+        sentimentResponse.json(),
+        timelineResponse.json(),
+        engagementResponse.json()
+    ]);
+
+    // Render all components
+    renderStatsCards(overviewData);
+    renderSentimentChart(sentimentData);
+    renderTimelineChart(timelineData);
+    renderEngagementStats(engagementData);
+}
 
 function renderStatsCards(data) {
     const container = document.getElementById('stats-cards');
+    const selectedNames = getSelectedListenerNames();
+    const listenerIds = getSelectedListenerIds();
+
+    // Determine what to show in the "Active Listeners" card
+    let listenersCardContent;
+    if (!listenerIds || selectedNames.length === 0) {
+        // No filter - show total count
+        listenersCardContent = `
+            <h6 class="card-title"><i class="bi bi-ear me-2"></i>Active Listeners</h6>
+            <h2 class="mb-0">${data.total_listeners || 0}</h2>
+        `;
+    } else if (selectedNames.length === 1) {
+        // Single listener selected - show name
+        listenersCardContent = `
+            <h6 class="card-title"><i class="bi bi-ear me-2"></i>Listener</h6>
+            <h4 class="mb-0 text-truncate" title="${selectedNames[0]}">${selectedNames[0]}</h4>
+        `;
+    } else {
+        // Multiple listeners selected - show count
+        listenersCardContent = `
+            <h6 class="card-title"><i class="bi bi-ear me-2"></i>Selected Listeners</h6>
+            <h2 class="mb-0">${selectedNames.length}</h2>
+        `;
+    }
+
     container.innerHTML = `
         <div class="col-md-3 mb-3">
             <div class="card bg-primary text-white h-100">
@@ -105,8 +230,7 @@ function renderStatsCards(data) {
         <div class="col-md-3 mb-3">
             <div class="card bg-success text-white h-100">
                 <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-ear me-2"></i>Active Listeners</h6>
-                    <h2 class="mb-0">${data.total_listeners || 0}</h2>
+                    ${listenersCardContent}
                 </div>
             </div>
         </div>

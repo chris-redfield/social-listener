@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import List
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func, and_, case
@@ -11,9 +12,28 @@ from app.schemas import AnalyticsOverview, SentimentBreakdown, TimelinePoint, Au
 router = APIRouter()
 
 
+def parse_listener_ids(listener_ids: str | None) -> List[int] | None:
+    """Parse comma-separated listener IDs into a list of integers."""
+    if not listener_ids:
+        return None
+    try:
+        return [int(id.strip()) for id in listener_ids.split(",") if id.strip()]
+    except ValueError:
+        return None
+
+
+def build_listener_filter(listener_ids: List[int] | None):
+    """Build SQLAlchemy filter for listener IDs."""
+    if not listener_ids:
+        return True  # No filter
+    if len(listener_ids) == 1:
+        return Post.listener_id == listener_ids[0]
+    return Post.listener_id.in_(listener_ids)
+
+
 @router.get("/overview", response_model=AnalyticsOverview)
 async def analytics_overview(
-    listener_id: int | None = None,
+    listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get overall analytics summary."""
@@ -22,7 +42,8 @@ async def analytics_overview(
     week_start = today_start - timedelta(days=7)
 
     # Base query filter
-    post_filter = Post.listener_id == listener_id if listener_id else True
+    parsed_ids = parse_listener_ids(listener_ids)
+    post_filter = build_listener_filter(parsed_ids)
 
     # Total posts
     total_posts = (
@@ -84,11 +105,12 @@ async def analytics_overview(
 
 @router.get("/sentiment", response_model=list[SentimentBreakdown])
 async def sentiment_breakdown(
-    listener_id: int | None = None,
+    listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get sentiment breakdown with percentages."""
-    post_filter = Post.listener_id == listener_id if listener_id else True
+    parsed_ids = parse_listener_ids(listener_ids)
+    post_filter = build_listener_filter(parsed_ids)
 
     query = (
         select(Post.sentiment_label, func.count(Post.id).label("count"))
@@ -114,7 +136,7 @@ async def sentiment_breakdown(
 
 @router.get("/timeline", response_model=list[TimelinePoint])
 async def posts_timeline(
-    listener_id: int | None = None,
+    listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
     days: int = Query(7, ge=1, le=90),
     session: AsyncSession = Depends(get_session),
 ):
@@ -122,7 +144,8 @@ async def posts_timeline(
     now = datetime.utcnow()
     start_date = now - timedelta(days=days)
 
-    post_filter = Post.listener_id == listener_id if listener_id else True
+    parsed_ids = parse_listener_ids(listener_ids)
+    post_filter = build_listener_filter(parsed_ids)
 
     # Use post_created_at (when post was made) instead of collected_at
     # Filter out posts without post_created_at
@@ -171,12 +194,13 @@ async def posts_timeline(
 
 @router.get("/authors", response_model=list[AuthorStats])
 async def top_authors(
-    listener_id: int | None = None,
+    listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
     limit: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ):
     """Get top authors by post count with engagement stats."""
-    post_filter = Post.listener_id == listener_id if listener_id else True
+    parsed_ids = parse_listener_ids(listener_ids)
+    post_filter = build_listener_filter(parsed_ids)
 
     query = (
         select(
@@ -209,11 +233,12 @@ async def top_authors(
 
 @router.get("/engagement")
 async def engagement_stats(
-    listener_id: int | None = None,
+    listener_ids: str | None = Query(None, description="Comma-separated listener IDs"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get engagement statistics."""
-    post_filter = Post.listener_id == listener_id if listener_id else True
+    parsed_ids = parse_listener_ids(listener_ids)
+    post_filter = build_listener_filter(parsed_ids)
 
     query = select(
         func.sum(Post.likes_count).label("total_likes"),

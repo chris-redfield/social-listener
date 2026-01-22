@@ -149,3 +149,22 @@ body {
         font-size: 1.5rem;
     }
 }
+
+/* Dropdown checkbox styling */
+.dropdown-item label,
+label.dropdown-item {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin: 0;
+    padding: 0.5rem 1rem;
+}
+
+.dropdown-item label:hover,
+label.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-item .form-check-input {
+    margin-top: 0;
+}
