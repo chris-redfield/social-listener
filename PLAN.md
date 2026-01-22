@@ -536,7 +536,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 **Timeline:** 1 session (done)
 
-### Phase 4: Analytics & UI - MOSTLY COMPLETE
+### Phase 4: Analytics & UI - COMPLETE
 
 **Goal:** Rich analytics and improved interface
 
@@ -548,9 +548,9 @@ class PaginatedResponse(BaseModel, Generic[T]):
 - [x] Entities explorer with type/listener filters
 - [x] Dashboard listener filter (multi-select)
 - [x] "New content" flag system
-- [ ] Export functionality (CSV/JSON)
+- [x] Export functionality (CSV/JSON)
 
-**Timeline:** 1-2 sessions
+**Timeline:** 2 sessions (done)
 
 ### Phase 5: Production Readiness
 
@@ -781,7 +781,7 @@ settings = Settings()
   - Skip common words misclassified as ORG/LOC
   - Add minimum entity length filter
   - Consider entity type whitelist per context
-- [ ] **Export functionality**: Add CSV/JSON export for posts and analytics
+- [x] **Export functionality**: CSV/JSON export for posts (with filters)
 
 ### 10.2 Platform Expansion
 
@@ -977,7 +977,7 @@ curl http://localhost:8000/api/analytics/overview
 - [x] API proxy for collector service (trigger collection from UI)
 - [x] Multi-listener filter support in analytics endpoints
 
-### Session 4 - January 22, 2026 (Refinements)
+### Session 4 - January 22, 2026 (Refinements + Export)
 - [x] Dashboard date range filter (7, 14, 30, 60, 90, 180 days + All time)
 - [x] Date filter applies to ALL dashboard components (overview, sentiment, timeline, engagement)
 - [x] Fixed "Posts Today" to use post_created_at instead of collected_at
@@ -989,10 +989,15 @@ curl http://localhost:8000/api/analytics/overview
   - Added `initial_scrape_completed` field to Listener model
 - [x] Fixed timeline chart x-axis clipping (use Date objects instead of strings)
 - [x] Timeline now properly handles "All time" with type: 'date' axis
+- [x] Export functionality:
+  - Added date range filter to posts page (same as dashboard)
+  - Posts ordered by post_created_at descending
+  - Export endpoints: GET /api/posts/export/csv and /api/posts/export/json
+  - Export button in posts page UI (respects all filters)
 - **Stats:** 1002 posts, 1540 entities, 2 active listeners
+- **Phase 4 COMPLETE**
 
 ### Session 5 - [Date]
-- [ ] Export functionality (CSV/JSON)
 - [ ] Threads platform integration
 - [ ] ...
 
