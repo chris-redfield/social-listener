@@ -66,15 +66,16 @@ function renderTimelineChart(data) {
         return;
     }
 
-    const dates = data.map(d => formatDate(d.date));
+    // Use actual Date objects for proper time axis handling
+    const dates = data.map(d => new Date(d.date));
 
     const traces = [
         {
             x: dates,
-            y: data.map(d => d.sentiment_positive || 0),
-            name: 'Positive',
+            y: data.map(d => d.sentiment_negative || 0),
+            name: 'Negative',
             type: 'bar',
-            marker: { color: COLORS.positive }
+            marker: { color: COLORS.negative }
         },
         {
             x: dates,
@@ -85,19 +86,25 @@ function renderTimelineChart(data) {
         },
         {
             x: dates,
-            y: data.map(d => d.sentiment_negative || 0),
-            name: 'Negative',
+            y: data.map(d => d.sentiment_positive || 0),
+            name: 'Positive',
             type: 'bar',
-            marker: { color: COLORS.negative }
+            marker: { color: COLORS.positive }
         }
     ];
 
     const layout = {
         ...DEFAULT_LAYOUT,
         barmode: 'stack',
-        xaxis: { title: '' },
+        xaxis: {
+            type: 'date',
+            tickformat: '%b %d',
+            tickangle: -45,
+            automargin: true
+        },
         yaxis: { title: 'Posts' },
-        legend: { orientation: 'h', y: 1.1 }
+        legend: { orientation: 'h', y: 1.1 },
+        margin: { t: 30, r: 30, b: 80, l: 50 }
     };
 
     Plotly.newPlot('timeline-chart', traces, layout, { responsive: true });
