@@ -763,10 +763,10 @@ settings = Settings()
 
 ### 10.1.1 TODO - Small Improvements
 
-- [ ] **Bluesky search limit**: Currently hardcoded to 50 posts per request. Options:
-  - Increase to 100 (Bluesky API max)
-  - Make configurable via `BLUESKY_SEARCH_LIMIT` env var
-  - Add pagination support to fetch all results via cursor
+- [x] **Bluesky pagination**: Implemented cursor-based pagination
+  - Initial scrape: up to 500 posts with pagination
+  - Regular scrapes: 100 posts (API max, single request)
+  - Tracked via `initial_scrape_completed` field on Listener
 - [ ] **Reprocess endpoint**: Add `POST /posts/reprocess` to re-run NLP on existing posts
 - [x] **Listener update endpoint**: Add `PUT /listeners/{id}` to update listener settings
 - [x] **Manual collection trigger**: Add `POST /listeners/{id}/collect` to trigger collection from UI
@@ -977,7 +977,21 @@ curl http://localhost:8000/api/analytics/overview
 - [x] API proxy for collector service (trigger collection from UI)
 - [x] Multi-listener filter support in analytics endpoints
 
-### Session 4 - [Date]
+### Session 4 - January 22, 2026 (Refinements)
+- [x] Dashboard date range filter (7, 14, 30, 60, 90, 180 days + All time)
+- [x] Date filter applies to ALL dashboard components (overview, sentiment, timeline, engagement)
+- [x] Fixed "Posts Today" to use post_created_at instead of collected_at
+- [x] Posts page pagination with page numbers and navigation
+- [x] Fixed posts page filters (sentiment_label, page_size params)
+- [x] Bluesky pagination for initial scrape:
+  - First scrape: up to 500 posts with cursor pagination
+  - Subsequent scrapes: 100 posts (API max, no pagination)
+  - Added `initial_scrape_completed` field to Listener model
+- [x] Fixed timeline chart x-axis clipping (use Date objects instead of strings)
+- [x] Timeline now properly handles "All time" with type: 'date' axis
+- **Stats:** 1002 posts, 1540 entities, 2 active listeners
+
+### Session 5 - [Date]
 - [ ] Export functionality (CSV/JSON)
 - [ ] Threads platform integration
 - [ ] ...

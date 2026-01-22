@@ -12,19 +12,31 @@
 <div class="card mb-4">
     <div class="card-body">
         <form id="filterForm" class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Listener</label>
                 <select class="form-select" name="listener_id" id="listenerFilter">
                     <option value="">All</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Sentiment</label>
                 <select class="form-select" name="sentiment_label">
                     <option value="">All</option>
                     <option value="positive">Positive</option>
                     <option value="neutral">Neutral</option>
                     <option value="negative">Negative</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Date Range</label>
+                <select class="form-select" name="days" id="daysFilter">
+                    <option value="">All time</option>
+                    <option value="7">Last 7 days</option>
+                    <option value="14">Last 14 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="60">Last 60 days</option>
+                    <option value="90">Last 90 days</option>
+                    <option value="180">Last 180 days</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -39,6 +51,17 @@
                 <button type="submit" class="btn btn-primary w-100">
                     <i class="bi bi-funnel me-1"></i> Filter
                 </button>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="dropdown w-100">
+                    <button class="btn btn-outline-success dropdown-toggle w-100" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download me-1"></i> Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdown">
+                        <li><a class="dropdown-item" href="#" onclick="exportPosts('csv'); return false;"><i class="bi bi-filetype-csv me-2"></i>Export as CSV</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportPosts('json'); return false;"><i class="bi bi-filetype-json me-2"></i>Export as JSON</a></li>
+                    </ul>
+                </div>
             </div>
         </form>
     </div>
@@ -256,5 +279,18 @@ document.getElementById('filterForm').addEventListener('submit', async (e) => {
     // Reset to page 1 when filters change
     loadPosts(1);
 });
+
+function exportPosts(format) {
+    // Build query params from current filters (excluding pagination)
+    const exportFilters = { ...currentFilters };
+    delete exportFilters.page;
+    delete exportFilters.page_size;
+
+    const queryParams = new URLSearchParams(exportFilters);
+    const url = `/api/posts/export/${format}?${queryParams}`;
+
+    // Trigger download
+    window.location.href = url;
+}
 </script>
 {% endblock %}
