@@ -765,6 +765,11 @@ settings = Settings()
   - Add pagination support to fetch all results via cursor
 - [ ] **Reprocess endpoint**: Add `POST /posts/reprocess` to re-run NLP on existing posts
 - [ ] **Listener update endpoint**: Add `PUT /listeners/{id}` to update listener settings
+- [ ] **Language detection + multi-language NLP**: Detect post language and use appropriate models
+  - Use `langdetect` or `lingua` for language detection
+  - Load multiple spaCy models (en, pt, es, etc.)
+  - Route to correct model based on detected language
+  - Store detected language in posts table
 
 ### 10.2 Platform Expansion
 

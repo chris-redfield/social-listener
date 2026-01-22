@@ -13,8 +13,8 @@ def get_ner_model():
     """Get or load the spaCy NER model (singleton pattern)."""
     global _nlp_model
     if _nlp_model is None:
-        logger.info("Loading spaCy model: en_core_web_sm")
-        _nlp_model = spacy.load("en_core_web_sm")
+        logger.info("Loading spaCy model: pt_core_news_sm (Portuguese)")
+        _nlp_model = spacy.load("pt_core_news_sm")
         logger.info("spaCy model loaded successfully")
     return _nlp_model
 
