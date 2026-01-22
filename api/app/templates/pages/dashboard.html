@@ -41,18 +41,8 @@
     </div>
 </div>
 
-<!-- Top Authors -->
+<!-- Engagement Stats -->
 <div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-people me-2"></i>Top Authors
-            </div>
-            <div class="card-body">
-                <div id="authors-chart" style="height: 300px;"></div>
-            </div>
-        </div>
-    </div>
     <div class="col-md-6 mb-4">
         <div class="card h-100">
             <div class="card-header">
@@ -85,12 +75,8 @@ async function loadDashboardCharts() {
     // Load timeline chart
     const timelineResponse = await fetch('/api/analytics/timeline?days=7');
     const timelineData = await timelineResponse.json();
+    console.log('Timeline data:', timelineData);
     renderTimelineChart(timelineData);
-
-    // Load authors chart
-    const authorsResponse = await fetch('/api/analytics/authors?limit=10');
-    const authorsData = await authorsResponse.json();
-    renderAuthorsChart(authorsData);
 }
 
 // HTMX after-swap handler for stats cards

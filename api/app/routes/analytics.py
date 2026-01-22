@@ -124,9 +124,14 @@ async def posts_timeline(
 
     post_filter = Post.listener_id == listener_id if listener_id else True
 
+    # Use post_created_at (when post was made) instead of collected_at
+    # Filter out posts without post_created_at
+    # Note: Reuse the same expression for select, group_by, and order_by to avoid SQL errors
+    date_col = func.date_trunc("day", Post.post_created_at).label("date")
+
     query = (
         select(
-            func.date_trunc("day", Post.collected_at).label("date"),
+            date_col,
             func.count(Post.id).label("count"),
             func.sum(case((Post.sentiment_label == "positive", 1), else_=0)).label(
                 "sentiment_positive"
@@ -138,9 +143,15 @@ async def posts_timeline(
                 "sentiment_neutral"
             ),
         )
-        .where(and_(post_filter, Post.collected_at >= start_date))
-        .group_by(func.date_trunc("day", Post.collected_at))
-        .order_by(func.date_trunc("day", Post.collected_at))
+        .where(
+            and_(
+                post_filter,
+                Post.post_created_at.isnot(None),
+                Post.post_created_at >= start_date,
+            )
+        )
+        .group_by(date_col)
+        .order_by(date_col)
     )
 
     result = await session.execute(query)
